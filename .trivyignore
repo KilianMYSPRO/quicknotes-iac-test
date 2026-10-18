@@ -4,3 +4,9 @@
 # Exemple :
 # AZU-0047 : regle NSG HTTP ouverte a Internet. C'est un site web public, SSH reste limite.
 # AZU-0047
+# AZU-0047 (CRITICAL) : regle NSG HTTP ouverte a Internet. C'est un site web public ;
+#   SSH, lui, reste limite a l'IP de l'ecole.
+AZU-0047
+# AZU-0012 (CRITICAL) : stockage sans "default action = Deny" (point de terminaison
+#   prive hors budget Azure for Students). A traiter avant une vraie production.
+AZU-0012
