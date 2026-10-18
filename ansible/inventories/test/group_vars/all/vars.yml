@@ -1,0 +1,12 @@
+# Variables communes a tout l'environnement TEST
+# Les secrets sont dans vault.yml (chiffre avec ansible-vault), prefixes par vault_
+app_env: test
+app_version: "1.0.0"
+
+db_name: quicknotes
+db_user: quicknotes
+db_password: "{{ vault_db_password }}"
+
+# Adresse de la base vue par l'application : IP privee du serveur db
+# (sur Azure, ansible_host de db1 est aussi son IP privee ; dans le lab, c'est le nom db1)
+db_host: "{{ hostvars[groups['db'][0]]['private_ip'] | default(hostvars[groups['db'][0]]['ansible_host']) }}"

@@ -32,7 +32,8 @@
     # En mode --check, rien n'est vraiment deploye : on saute le test.
     - name: La page /health repond 200 a travers Nginx
       ansible.builtin.uri:
-        url: "http://{{ ansible_host }}/health"
+        # Surchargeable : -e smoke_test_url=http://IP:PORT/health (port redirige, rebond...)
+        url: "{{ smoke_test_url | default('http://' ~ ansible_host ~ '/health') }}"
         status_code: 200
       delegate_to: localhost
       register: health

@@ -1,2 +1,4 @@
-# A COMPLETER : handler "Redemarrer PostgreSQL"
-[]
+- name: Redemarrer PostgreSQL
+  ansible.builtin.service:
+    name: postgresql
+    state: restarted

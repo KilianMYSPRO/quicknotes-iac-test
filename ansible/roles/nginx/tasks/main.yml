@@ -1,8 +1,34 @@
-# A COMPLETER : role nginx (voir TP2, partie 3.4)
-# 1. Installer nginx
-# 2. Supprimer /etc/nginx/sites-enabled/default                -> notify
-# 3. Template quicknotes.conf.j2 -> /etc/nginx/sites-available/ -> notify
-# 4. Lien symbolique dans /etc/nginx/sites-enabled/             -> notify
-# 5. Verifier la syntaxe : nginx -t   (attention a l'idempotence !)
-# 6. Service nginx demarre et active
-[]
+- name: Installer Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Desactiver le site par defaut
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Recharger Nginx
+
+- name: Deployer la configuration du reverse proxy
+  ansible.builtin.template:
+    src: quicknotes.conf.j2
+    dest: /etc/nginx/sites-available/quicknotes.conf
+    mode: "0644"
+  notify: Recharger Nginx
+
+- name: Activer le site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/quicknotes.conf
+    dest: /etc/nginx/sites-enabled/quicknotes.conf
+    state: link
+  notify: Recharger Nginx
+
+- name: Verifier la syntaxe de la configuration (nginx -t)
+  ansible.builtin.command: nginx -t
+  changed_when: false   # une verification ne modifie rien : on le dit a Ansible
+
+- name: Nginx demarre et active au boot
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true

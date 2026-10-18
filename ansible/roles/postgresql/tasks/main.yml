@@ -1,8 +1,41 @@
-# A COMPLETER : role postgresql (voir TP2, partie 3.2)
-# 1. Installer postgresql-{{ postgresql_version }}, python3-psycopg2 et acl
-# 2. postgresql.conf : listen_addresses = '*'            (lineinfile + regexp, notify)
-# 3. pg_hba.conf : autoriser {{ db_user }} depuis {{ postgresql_allowed_network }}   (lineinfile, notify)
-# 4. Service postgresql demarre et active au boot
-# 5. Creer l'utilisateur {{ db_user }}  (community.postgresql.postgresql_user, en tant que postgres, no_log)
-# 6. Creer la base {{ db_name }}         (community.postgresql.postgresql_db, en tant que postgres)
-[]
+- name: Installer PostgreSQL et la librairie Python requise par les modules Ansible
+  ansible.builtin.apt:
+    name:
+      - "postgresql-{{ postgresql_version }}"
+      - python3-psycopg2
+      - acl   # necessaire pour become_user vers un utilisateur non privilegie
+    state: present
+
+- name: Ecouter sur toutes les interfaces (pas seulement localhost)
+  ansible.builtin.lineinfile:
+    path: "/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+    regexp: "^#?listen_addresses"
+    line: "listen_addresses = '*'"
+  notify: Redemarrer PostgreSQL
+
+- name: Autoriser le reseau applicatif dans pg_hba.conf
+  ansible.builtin.lineinfile:
+    path: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+    line: "host  {{ db_name }}  {{ db_user }}  {{ postgresql_allowed_network }}  scram-sha-256"
+  notify: Redemarrer PostgreSQL
+
+- name: PostgreSQL demarre et active au boot
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Creer l'utilisateur de la base
+  community.postgresql.postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+  become: true
+  become_user: postgres
+  no_log: true   # ne jamais afficher un mot de passe dans les logs
+
+- name: Creer la base de donnees
+  community.postgresql.postgresql_db:
+    name: "{{ db_name }}"
+    owner: "{{ db_user }}"
+  become: true
+  become_user: postgres

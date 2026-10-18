@@ -1,0 +1,16 @@
+- name: Mon premier playbook
+  hosts: all
+  become: true
+  tasks:
+    - name: Installer quelques paquets
+      ansible.builtin.apt:
+        name: [curl, vim, htop]
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Creer un message d'accueil
+      ansible.builtin.copy:
+        dest: /etc/motd
+        content: "Serveur gere par Ansible. Ne pas modifier a la main !\n"
+        mode: "0644"

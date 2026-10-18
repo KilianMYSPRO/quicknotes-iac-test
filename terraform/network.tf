@@ -1,17 +1,57 @@
-# ---------- Etape 2 : reseau ----------
-# TODO 2.1 : resource "azurerm_virtual_network" "main"
-#   name = "vnet-${local.name}", address_space = [var.address_space]
-#   + resource_group_name, location, tags
+resource "azurerm_virtual_network" "main" {
+  name                = "vnet-${local.name}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  address_space       = [var.address_space]
+  tags                = local.tags
+}
 
-# TODO 2.2 : resource "azurerm_subnet" "main"
-#   name = "snet-app", virtual_network_name = (nom du VNet), address_prefixes = [local.subnet_prefix]
-#   default_outbound_access_enabled = true   # db1 (sans IP publique) doit pouvoir faire apt install
+resource "azurerm_subnet" "main" {
+  name                 = "snet-app"
+  resource_group_name  = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = [local.subnet_prefix]
 
-# TODO 2.3 : resource "azurerm_network_security_group" "main"   name = "nsg-${local.name}"
-#   Deux blocs security_rule (direction "Inbound", access "Allow", protocol "Tcp",
-#   source_port_range "*", destination_address_prefix "*") :
-#     - "SSH-depuis-ecole"     priority 100, port 22, source = var.allowed_ssh_cidr
-#     - "HTTP-depuis-Internet" priority 110, port 80, source = "Internet"
+  # Depuis le 31/03/2026, les nouveaux sous-reseaux Azure sont "prives" par defaut :
+  # db1 (sans IP publique) n'aurait plus acces a Internet (apt install impossible).
+  # En entreprise : NAT Gateway (payante). Ici : acces sortant par defaut, explicite.
+  default_outbound_access_enabled = true
+}
 
-# TODO 2.4 : resource "azurerm_subnet_network_security_group_association" "main"
-#   subnet_id, network_security_group_id
+resource "azurerm_network_security_group" "main" {
+  name                = "nsg-${local.name}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  tags                = local.tags
+
+  security_rule {
+    name                       = "SSH-depuis-ecole"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = var.allowed_ssh_cidr # jamais 0.0.0.0/0
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "HTTP-depuis-Internet"
+    priority                   = 110
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = "Internet"
+    destination_address_prefix = "*"
+  }
+  # Le reste est refuse par les regles par defaut d'Azure (DenyAllInBound),
+  # sauf le trafic interne au VNet (AllowVnetInBound) : web1 -> db1:5432 fonctionne.
+}
+
+resource "azurerm_subnet_network_security_group_association" "main" {
+  subnet_id                 = azurerm_subnet.main.id
+  network_security_group_id = azurerm_network_security_group.main.id
+}

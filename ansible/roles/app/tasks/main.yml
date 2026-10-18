@@ -1,11 +1,63 @@
-# A COMPLETER : role app (voir TP2, partie 3.3)
-# 1. Installer python3, python3-venv, python3-packaging
-# 2. Utilisateur systeme {{ app_user }} sans shell de connexion
-# 3. Repertoire {{ app_dir }} appartenant a {{ app_user }}
-# 4. Copier app.py et requirements.txt (une tache + loop)                 -> notify
-# 5. Dependances dans le virtualenv {{ app_dir }}/venv (ansible.builtin.pip) -> notify
-# 6. Template quicknotes.env.j2 -> /etc/quicknotes.env (0640, root:{{ app_user }}) -> notify
-#    + diff: false   (le fichier contient le mot de passe : --diff l'afficherait en clair)
-# 7. Template quicknotes.service.j2 -> /etc/systemd/system/quicknotes.service    -> notify
-# 8. Service quicknotes demarre et active (daemon_reload: true)
-[]
+- name: Installer Python, venv et packaging (requis par le module pip d'Ansible)
+  ansible.builtin.apt:
+    name: [python3, python3-venv, python3-packaging]
+    state: present
+
+- name: Creer l'utilisateur systeme de l'application
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ app_dir }}"
+    create_home: false
+
+- name: Creer le repertoire de l'application
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    mode: "0755"
+
+- name: Copier le code et les dependances
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ app_dir }}/{{ item }}"
+    owner: "{{ app_user }}"
+    mode: "0644"
+  loop:
+    - app.py
+    - requirements.txt
+  notify: Redemarrer QuickNotes
+
+- name: Installer les dependances dans un virtualenv
+  ansible.builtin.pip:
+    requirements: "{{ app_dir }}/requirements.txt"
+    virtualenv: "{{ app_dir }}/venv"
+    virtualenv_command: python3 -m venv
+  # Le module pip annonce toujours "changed" en mode --check : on ne l'execute pas dans ce mode
+  when: not ansible_check_mode
+  notify: Redemarrer QuickNotes
+
+- name: Fichier de configuration (secrets) lisible uniquement par l'application
+  ansible.builtin.template:
+    src: quicknotes.env.j2
+    dest: /etc/quicknotes.env
+    owner: root
+    group: "{{ app_user }}"
+    mode: "0640"
+  diff: false   # sinon --diff afficherait le mot de passe (ancien et nouveau) en clair
+  notify: Redemarrer QuickNotes
+
+- name: Service systemd
+  ansible.builtin.template:
+    src: quicknotes.service.j2
+    dest: /etc/systemd/system/quicknotes.service
+    mode: "0644"
+  notify: Redemarrer QuickNotes
+
+- name: Service demarre et active au boot
+  ansible.builtin.systemd_service:
+    name: quicknotes
+    state: started
+    enabled: true
+    daemon_reload: true
