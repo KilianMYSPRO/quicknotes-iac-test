@@ -1,9 +1,27 @@
-# TP5 : Dependabot ouvre des pull requests de mise a jour (chapitre 5.4)
-# Le bloc pip est fourni. TODO : ajoutez les ecosystemes docker (dossier /app),
-# github-actions (dossier /) et terraform (dossier /terraform), avec un rythme hebdomadaire.
+# Dependabot : ouvre automatiquement des pull requests de mise a jour (chapitre 5.4).
+# Chaque PR passe par la CI : on ne fusionne que si tout est vert.
+# A activer aussi : Settings > Code security > Dependabot alerts + security updates.
 version: 2
 updates:
-  - package-ecosystem: pip
+  - package-ecosystem: pip            # app/requirements.txt (Flask, gunicorn, psycopg)
     directory: /app
-    schedule:
-      interval: weekly
+    schedule: {interval: weekly, day: monday}
+    open-pull-requests-limit: 5
+    labels: [dependances]
+
+  - package-ecosystem: docker         # FROM python:3.12-slim (correctifs de l'image de base)
+    directory: /app
+    schedule: {interval: weekly}
+    labels: [dependances]
+
+  - package-ecosystem: github-actions # met a jour les SHA epingles ET le commentaire de version
+    directory: /
+    schedule: {interval: weekly}
+    groups:
+      actions:
+        patterns: ["*"]               # une seule PR groupee pour toutes les actions
+
+  - package-ecosystem: terraform      # providers azurerm, random, local
+    directory: /terraform
+    schedule: {interval: weekly}
+    labels: [dependances]
