@@ -10,6 +10,7 @@ resource "azurerm_public_ip" "this" {
 }
 
 resource "azurerm_network_interface" "this" {
+  #checkov:skip=CKV_AZURE_119:seule web1 a une IP publique (public_ip = true), db1 n'en a pas
   name                = "nic-${var.name}"
   location            = var.location
   resource_group_name = var.resource_group_name
@@ -32,6 +33,8 @@ resource "azurerm_linux_virtual_machine" "this" {
   network_interface_ids = [azurerm_network_interface.this.id]
   tags                  = merge(var.tags, { role = var.role })
 
+  # CKV_AZURE_50 : aucune extension de VM, la configuration passe par Ansible
+  allow_extension_operations = false
 
   # Connexion par cle SSH uniquement : aucun mot de passe
   disable_password_authentication = true

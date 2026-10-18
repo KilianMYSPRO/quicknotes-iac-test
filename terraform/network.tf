@@ -19,6 +19,7 @@ resource "azurerm_subnet" "main" {
 }
 
 resource "azurerm_network_security_group" "main" {
+  #checkov:skip=CKV_AZURE_160:HTTP 80 ouvert volontairement (site public) ; HTTPS = aller plus loin
   name                = "nsg-${local.name}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name

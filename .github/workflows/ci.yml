@@ -11,11 +11,15 @@ name: CI
 #   - sur chaque push sur la branche main
 #   - a la main (workflow_dispatch)
 on:
+  pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 # TODO 2 : moindre privilege. Par defaut, le jeton GITHUB_TOKEN doit seulement
 #          pouvoir LIRE le code (contents: read).
-# permissions:
+permissions:
+  contents: read
 
 # Un nouveau push sur la meme branche annule le run precedent (economie de minutes).
 # NB : une expression ${{ }} ici ferait ignorer CE fichier par checkov, sans erreur.
@@ -105,7 +109,15 @@ jobs:
       #       terraform -chdir=<dossier> validate
       #       terraform -chdir=<dossier> test     (seulement si <dossier>/tests existe)
       - name: Terraform fmt, validate et tests
-        run: echo "TODO 3"
+        run: |
+          terraform fmt -check -recursive
+          for d in terraform terraform-local; do
+            terraform -chdir="$d" init -backend=false -input=false
+            terraform -chdir="$d" validate
+            if [ -d "$d/tests" ]; then
+              terraform -chdir="$d" test
+            fi
+          done
 
       - name: Installer hadolint et kubeconform (binaires verifies par sha256)
         run: |
@@ -120,7 +132,7 @@ jobs:
 
       # TODO 4 : analyser app/Dockerfile avec hadolint
       - name: hadolint
-        run: echo "TODO 4"
+        run: hadolint app/Dockerfile
 
       # (TP6) valide les manifestes Kubernetes s'il y en a
       - name: kubeconform (manifestes Kubernetes valides)
@@ -138,6 +150,8 @@ jobs:
       # TODO 5 : gitleaks doit analyser TOUT l'historique Git, pas seulement le dernier commit.
       #          Par defaut, checkout ne recupere que le dernier commit. Quel parametre changer ?
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Installer gitleaks et trivy (binaires verifies par sha256)
         run: |
@@ -153,7 +167,7 @@ jobs:
       # TODO 6 : detecter les secrets dans l'historique
       #          commande : gitleaks git . --redact --verbose --no-banner
       - name: gitleaks
-        run: echo "TODO 6"
+        run: gitleaks git . --redact --verbose --no-banner
 
       # TP6 : quand vos manifestes seront termines, retirez "--skip-path k8s"
       #       (ici les squelettes k8s/ du TP6 donneraient 9 echecs normaux)
@@ -175,10 +189,13 @@ jobs:
     name: 3. Build, scan et publication de l'image
     # TODO 7 : ce job ne doit demarrer QUE si les jobs lint ET securite ont reussi
     #          (mot-cle needs)
+    needs: [lint, securite]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     # TODO 8 : ce job a besoin, EN PLUS de lire le code, d'ecrire dans GitHub Packages (GHCR)
-    # permissions:
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -201,11 +218,13 @@ jobs:
           echo "${TRIVY_SHA256}  trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" | sha256sum -c -
           tar xzf "trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" trivy && rm -f trivy_*.tar.gz
           ./trivy image --quiet --severity HIGH,CRITICAL "${IMAGE}:${GITHUB_SHA}"
-          ./trivy image --quiet "${IMAGE}:${GITHUB_SHA}"
+          ./trivy image --quiet --severity CRITICAL --ignore-unfixed \
+            --exit-code 1 "${IMAGE}:${GITHUB_SHA}"
 
       # TODO 10 : ces deux etapes ne doivent s'executer QUE sur un push sur main
       #           (jamais sur une pull request). Ajoutez la meme condition "if:" aux deux.
       - name: Connexion a GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
@@ -213,6 +232,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: docker push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           docker push "${IMAGE}:${GITHUB_SHA}"
           docker push "${IMAGE}:latest"
