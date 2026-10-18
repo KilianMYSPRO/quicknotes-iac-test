@@ -1,0 +1,13 @@
+# Poste de controle : Ansible + outils, identique pour tous (Windows, macOS, Linux).
+FROM ubuntu:24.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ansible ansible-lint openssh-client python3 curl git nano vim tree less ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+# Collections Ansible utilisees par le TP (installees une fois pour toutes dans l'image)
+RUN ansible-galaxy collection install community.postgresql community.general ansible.posix
+# Sous Windows, les fichiers partages apparaissent "accessibles a tous en ecriture" :
+# Ansible ignore alors un ansible.cfg du repertoire courant. On l'indique explicitement.
+ENV ANSIBLE_CONFIG=/work/ansible/ansible.cfg
+WORKDIR /work
+CMD ["sleep", "infinity"]

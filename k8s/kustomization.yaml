@@ -1,0 +1,15 @@
+# kubectl apply -k k8s/     (deploie tout, dans l'ordre)
+# kubectl kustomize k8s/    (affiche le YAML final sans rien appliquer)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: quicknotes
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - db.yaml
+  - app.yaml
+  # - networkpolicy.yaml   # TP6 "aller plus loin" : TODO 9, puis decommenter
+# Le Secret n'est PAS ici : il ne doit jamais etre commite (voir secret.exemple.yaml)
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: quicknotes

@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+upstream quicknotes {
+{% for host in groups['app'] %}
+    server {{ hostvars[host]['private_ip'] | default(hostvars[host]['ansible_host']) }}:{{ hostvars[host]['app_port'] | default(8000) }};
+{% endfor %}
+}
+
+server {
+    listen 80 default_server;
+    server_name _;
+
+    location / {
+        proxy_pass http://quicknotes;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}

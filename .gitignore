@@ -1,0 +1,27 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+*.retry
+.vault_pass
+
+# --- Jour 2 : Terraform ---
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+terraform.tfvars
+# (le fichier .terraform.lock.hcl, lui, DOIT etre commite)
+
+# --- Jour 2 : Ansible ---
+# Mot de passe Ansible Vault (le fichier vault.yml chiffre, lui, est commite)
+.vault_pass
+# Inventaires generes par Terraform (regeneres a chaque apply)
+ansible/inventories/*/hosts-azure.yml
+ansible/inventories/*/hosts-local.yml
+
+# --- Jour 3 : Kubernetes ---
+# Un Secret Kubernetes n'est PAS chiffre (base64) : on le cree avec kubectl, jamais en fichier commite
+k8s/secret.yaml
+*.kubeconfig

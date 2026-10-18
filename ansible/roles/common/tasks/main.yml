@@ -1,0 +1,23 @@
+- name: Attendre la fin de cloud-init (VM cloud neuve, apt occupe au 1er demarrage)
+  ansible.builtin.command: cloud-init status --wait
+  args:
+    removes: /usr/bin/cloud-init   # ne s'execute que si cloud-init existe (pas dans le lab)
+  register: common_cloud_init
+  changed_when: false
+  failed_when: common_cloud_init.rc not in [0, 2]   # 2 = termine avec avertissements
+
+- name: Mettre a jour le cache apt (valable 1h)
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    lock_timeout: 300   # attendre si apt est deja utilise (mises a jour automatiques)
+
+- name: Installer les paquets de base
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+    lock_timeout: 300
+
+- name: Regler le fuseau horaire
+  community.general.timezone:
+    name: "{{ common_timezone }}"

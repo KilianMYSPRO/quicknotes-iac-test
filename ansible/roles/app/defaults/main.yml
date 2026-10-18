@@ -1,0 +1,4 @@
+app_user: quicknotes
+app_dir: /opt/quicknotes
+app_port: 8000
+app_workers: 2

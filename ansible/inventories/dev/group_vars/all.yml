@@ -1,0 +1,14 @@
+# Variables communes a tout l'environnement DEV
+app_env: dev
+app_version: "1.0.0"
+
+db_name: quicknotes
+db_user: quicknotes
+# ATTENTION : mot de passe en clair = mauvaise pratique.
+# On le corrigera au jour 2 avec Ansible Vault.
+db_password: "dev-password-a-changer"
+
+# Adresse de la base vue par l'application : IP privee du serveur db
+# (private_ip est fournie par l'inventaire genere par Terraform au jour 2 ;
+#  dans le lab du jour 1, on utilise ansible_host, c'est-a-dire le nom db1)
+db_host: "{{ hostvars[groups['db'][0]]['private_ip'] | default(hostvars[groups['db'][0]]['ansible_host']) }}"

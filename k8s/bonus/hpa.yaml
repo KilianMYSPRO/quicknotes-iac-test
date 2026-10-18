@@ -1,0 +1,21 @@
+# Bonus : autoscaling horizontal (necessite metrics-server)
+#   kubectl apply -f k8s/bonus/hpa.yaml && kubectl -n quicknotes get hpa -w
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: quicknotes
+  namespace: quicknotes
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: quicknotes
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50   # % de la "request" CPU (50m)

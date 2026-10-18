@@ -1,0 +1,77 @@
+# QuickNotes : Deployment + Service NodePort  (SQUELETTE : completez les TODO)
+# Modele : db.yaml (meme structure). Verifier :  kubectl apply --dry-run=server -f k8s/app.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quicknotes
+  namespace: quicknotes
+  labels:
+    app: quicknotes
+  annotations:
+    # Suppressions checkov justifiees (partie 4.2 du TP)
+    checkov.io/skip1: CKV_K8S_43=Lab kind sans registre - en prod on deploie ghcr.io/...@sha256
+    checkov.io/skip2: CKV_K8S_15=Image chargee par kind load - Always forcerait un pull impossible
+    checkov.io/skip3: CKV_K8S_35=QuickNotes lit sa config en variables d environnement (12-factor)
+spec:
+  replicas: 1                # TODO 2 : 2 replicas
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0      # on ne retire un ancien pod que quand un nouveau est pret
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: quicknotes
+  template:
+    metadata:
+      labels:
+        app: quicknotes      # doit correspondre au selector ci-dessus ET a celui du Service
+    spec:
+      automountServiceAccountToken: false
+      # Fourni : sans cette ligne, chaque Service injecte des variables (DB_PORT=tcp://10.96.x.x:5432,
+      # DB_SERVICE_HOST...) dans le pod. Ici envFrom l'emporte, mais mieux vaut eviter la confusion.
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001                    # appuser du Dockerfile
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: quicknotes:1.0.0
+          imagePullPolicy: IfNotPresent     # image chargee par "kind load docker-image"
+          ports:
+            - name: http
+              containerPort: 8000
+          # TODO 3 : charger TOUTES les cles de la ConfigMap quicknotes-config
+          #          comme variables d'environnement (mot-cle envFrom + configMapRef)
+
+          # TODO 4 : definir la variable DB_PASSWORD a partir du Secret quicknotes-db
+          #          (cle DB_PASSWORD), avec valueFrom + secretKeyRef. Remplacez "env: []".
+          env: []
+
+          # TODO 5 : readinessProbe "puis-je recevoir du trafic ?"
+          #          -> httpGet sur /health, port http, toutes les 5 s, 2 echecs = pas pret
+
+          # TODO 6 : livenessProbe "le processus est-il vivant ?"
+          #          -> tcpSocket sur le port http (PAS /health : voir question 7 du TP)
+
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          # TODO 7 : securiser le conteneur (modele : db.yaml)
+          #   allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities drop ALL
+          # securityContext:
+          volumeMounts:
+            - name: tmp                     # gunicorn a besoin d'ecrire dans /tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+# TODO 8 : Service de type NodePort nomme "quicknotes" dans le namespace quicknotes
+#   - selector : app: quicknotes
+#   - port 80 -> targetPort http
+#   - nodePort 30080 (publie sur le port 8082 de la VM par kind-config.yaml)

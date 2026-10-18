@@ -1,0 +1,8 @@
+common_packages:
+  - curl
+  - vim
+  - htop
+  - ca-certificates
+  - tzdata
+  - util-linux-extra   # fournit hwclock, requis par le module timezone
+common_timezone: Europe/Paris

@@ -1,0 +1,11 @@
+# A COMPLETER : role app (voir TP2, partie 3.3)
+# 1. Installer python3, python3-venv, python3-packaging
+# 2. Utilisateur systeme {{ app_user }} sans shell de connexion
+# 3. Repertoire {{ app_dir }} appartenant a {{ app_user }}
+# 4. Copier app.py et requirements.txt (une tache + loop)                 -> notify
+# 5. Dependances dans le virtualenv {{ app_dir }}/venv (ansible.builtin.pip) -> notify
+# 6. Template quicknotes.env.j2 -> /etc/quicknotes.env (0640, root:{{ app_user }}) -> notify
+#    + diff: false   (le fichier contient le mot de passe : --diff l'afficherait en clair)
+# 7. Template quicknotes.service.j2 -> /etc/systemd/system/quicknotes.service    -> notify
+# 8. Service quicknotes demarre et active (daemon_reload: true)
+[]

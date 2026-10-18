@@ -1,0 +1,15 @@
+# "Serveur" Ubuntu 24.04 avec systemd + SSH : se comporte comme une VM pour Ansible.
+FROM ubuntu:24.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      systemd systemd-sysv openssh-server sudo python3 iproute2 iputils-ping ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m -s /bin/bash student \
+    && echo 'student ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/student \
+    && mkdir -p /home/student/.ssh && chmod 700 /home/student/.ssh \
+    && chown student:student /home/student/.ssh \
+    && systemctl enable ssh
+COPY vm-entrypoint.sh /usr/local/bin/vm-entrypoint.sh
+RUN chmod +x /usr/local/bin/vm-entrypoint.sh
+STOPSIGNAL SIGRTMIN+3
+ENTRYPOINT ["/usr/local/bin/vm-entrypoint.sh"]

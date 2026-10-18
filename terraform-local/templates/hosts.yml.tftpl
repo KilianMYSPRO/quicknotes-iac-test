@@ -1,0 +1,24 @@
+# FICHIER GENERE PAR TERRAFORM (environnement ${environment}) : ne pas modifier a la main.
+# Il est regenere a chaque terraform apply.
+all:
+  vars:
+    ansible_user: ${admin_username}
+    ansible_python_interpreter: /usr/bin/python3
+  children:
+    web:
+      hosts:
+        web1:
+          ansible_host: ${web_public_ip}
+          private_ip: ${web_private_ip}
+    app:
+      hosts:
+        web1:
+    db:
+      hosts:
+        db1:
+          # Pas d'IP publique : Ansible rebondit par web1 (comme ssh -J, voir FAQ)
+          ansible_host: ${db_private_ip}
+          private_ip: ${db_private_ip}
+          ansible_ssh_common_args: >-
+            -o ProxyCommand="ssh -W %h:%p -q -o StrictHostKeyChecking=no
+            -o UserKnownHostsFile=/dev/null ${admin_username}@${web_public_ip}"

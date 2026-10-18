@@ -1,0 +1,41 @@
+# Bonus (supervision) : alerte si le CPU de web1 depasse 80 % pendant 5 minutes.
+# Prerequis : az provider register --namespace Microsoft.Insights
+resource "azurerm_monitor_action_group" "email" {
+  count               = var.enable_monitoring && var.alert_email != "" ? 1 : 0
+  name                = "ag-${local.name}"
+  resource_group_name = azurerm_resource_group.main.name
+  short_name          = "qn${var.environment}"
+  tags                = local.tags
+
+  email_receiver {
+    name          = "admin"
+    email_address = var.alert_email
+  }
+}
+
+resource "azurerm_monitor_metric_alert" "cpu_web" {
+  count               = var.enable_monitoring ? 1 : 0
+  name                = "alerte-cpu-web1-${var.environment}"
+  resource_group_name = azurerm_resource_group.main.name
+  scopes              = [module.web.vm_id]
+  description         = "CPU de web1 > 80 % (moyenne sur 5 min)"
+  severity            = 2
+  frequency           = "PT1M"
+  window_size         = "PT5M"
+  tags                = local.tags
+
+  criteria {
+    metric_namespace = "Microsoft.Compute/virtualMachines"
+    metric_name      = "Percentage CPU"
+    aggregation      = "Average"
+    operator         = "GreaterThan"
+    threshold        = 80
+  }
+
+  dynamic "action" {
+    for_each = azurerm_monitor_action_group.email
+    content {
+      action_group_id = action.value.id
+    }
+  }
+}

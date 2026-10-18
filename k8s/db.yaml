@@ -1,0 +1,117 @@
+# PostgreSQL : volume persistant + Deployment (1 replica) + Service interne "db"
+# FOURNI COMPLET : lisez-le, il sert de MODELE pour app.yaml.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-data
+  namespace: quicknotes
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi           # kind fournit la StorageClass "standard" (local-path)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: quicknotes
+  labels:
+    app: db
+  annotations:
+    # Suppressions JUSTIFIEES (checkov lit ces annotations sur le pod template)
+    checkov.io/skip1: CKV_K8S_43=Lab kind sans registre - en prod on epingle le digest sha256
+    checkov.io/skip2: CKV_K8S_15=Image chargee par kind load - Always forcerait un pull Docker Hub
+    checkov.io/skip3: CKV_K8S_40=UID 70 impose par l image postgres alpine
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate           # jamais 2 Postgres sur le meme volume
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70        # utilisateur postgres de l'image alpine
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef: {name: quicknotes-config, key: DB_NAME}
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef: {name: quicknotes-config, key: DB_USER}
+            # Mot de passe lu dans un FICHIER (secret monte en volume) plutot qu'une variable
+            # d'environnement : il n'apparait pas dans "kubectl describe" ni dans /proc/1/environ
+            - name: POSTGRES_PASSWORD_FILE
+              value: /run/secrets/db/DB_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "quicknotes", "-d", "quicknotes"]
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "quicknotes"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: run              # socket unix de Postgres
+              mountPath: /var/run/postgresql
+            - name: tmp
+              mountPath: /tmp
+            - name: db-secret
+              mountPath: /run/secrets/db
+              readOnly: true
+      volumes:
+        - name: db-secret
+          secret:
+            secretName: quicknotes-db
+            defaultMode: 0440
+        - name: data
+          persistentVolumeClaim:
+            claimName: db-data
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: quicknotes
+spec:
+  type: ClusterIP            # joignable uniquement depuis le cluster
+  selector:
+    app: db
+  ports:
+    - port: 5432
+      targetPort: 5432

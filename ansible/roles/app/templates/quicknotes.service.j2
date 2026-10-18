@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+[Unit]
+Description=QuickNotes ({{ app_env }})
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ app_user }}
+WorkingDirectory={{ app_dir }}
+EnvironmentFile=/etc/quicknotes.env
+ExecStart={{ app_dir }}/venv/bin/gunicorn --bind 0.0.0.0:{{ app_port }} --workers {{ app_workers }} app:app
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

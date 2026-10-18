@@ -1,0 +1,36 @@
+# Cloisonnement reseau (equivalent du reseau "backend: internal" du jour 1)
+# TP6 "Pour aller plus loin" : completez le TODO 9, puis decommentez la ligne dans kustomization.yaml
+# Teste sur kind v0.29 : kindnet APPLIQUE les NetworkPolicy. Certains CNI les ignorent
+# SANS AUCUNE ERREUR : toujours verifier qu'une policy bloque vraiment (pod "intrus").
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: db-seulement-depuis-app
+  namespace: quicknotes
+spec:
+  podSelector:              # a QUI s'applique la policy : aux pods de la base
+    matchLabels:
+      app: db
+  policyTypes: [Ingress]
+  ingress:
+    # TODO 9 : n'autoriser QUE les pods portant le label app: quicknotes
+    #          (ajoutez un bloc "from:" avec un podSelector, au-dessus de "ports:")
+    - ports:
+        - port: 5432
+          protocol: TCP
+---
+# FOURNI : l'app accepte le trafic HTTP (Service NodePort) sur 8000, et rien d'autre
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-http-seulement
+  namespace: quicknotes
+spec:
+  podSelector:
+    matchLabels:
+      app: quicknotes
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: 8000
+          protocol: TCP

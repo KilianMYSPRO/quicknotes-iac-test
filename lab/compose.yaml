@@ -1,0 +1,63 @@
+# =====================================================================
+#  LAB DU JOUR 1 : deux serveurs Ubuntu (web1, db1) + un poste de controle Ansible
+# =====================================================================
+#  Demarrer (depuis le dossier lab/) :     docker compose up -d --build
+#  Ouvrir un terminal de controle :        docker exec -it lab-control bash
+#  Arreter :                               docker compose down
+#  Tout remettre a zero (serveurs neufs) : docker compose down -v
+#
+#  Dans lab-control :
+#   - /work est votre depot (dossier parent de lab/) : editez avec VS Code
+#   - les serveurs s'appellent web1 et db1 (ssh student@web1 fonctionne directement)
+#  Le site deploye sur web1 est visible sur http://<IP de la VM>:8081
+# =====================================================================
+name: lab
+
+x-server: &server
+  build: {context: ., dockerfile: Dockerfile.vm}
+  image: lab-server:1
+  privileged: true            # necessaire pour faire tourner systemd dans un conteneur
+  cgroup: private
+  tmpfs: ["/run", "/run/lock"]
+  volumes:
+    - lab-ssh:/lab-ssh:ro
+  depends_on:
+    keygen: {condition: service_completed_successfully}
+  networks: [lab]
+
+services:
+  keygen:
+    image: lab-control:1
+    build: {context: ., dockerfile: Dockerfile.control}
+    command: ["sh", "/lab/keygen.sh"]
+    volumes:
+      - lab-ssh:/lab-ssh
+      - ./keygen.sh:/lab/keygen.sh:ro
+
+  web1:
+    <<: *server
+    hostname: web1
+    container_name: lab-web1
+    ports: ["${WEB_PORT:-8081}:80"]     # WEB_PORT=8090 docker compose up -d   si 8081 est pris
+
+  db1:
+    <<: *server
+    hostname: db1
+    container_name: lab-db1
+
+  control:
+    image: lab-control:1
+    container_name: lab-control
+    hostname: control
+    volumes:
+      - ..:/work                  # votre depot
+      - lab-ssh:/root/.ssh        # cle et config SSH du lab
+    depends_on:
+      keygen: {condition: service_completed_successfully}
+    networks: [lab]
+
+volumes:
+  lab-ssh:
+
+networks:
+  lab:

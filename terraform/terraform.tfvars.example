@@ -1,0 +1,5 @@
+# Copier en terraform.tfvars (charge automatiquement, ignore par Git) puis adapter.
+# Valeurs communes a tous les environnements ; le reste est dans envs/<env>.tfvars
+location         = "francecentral"     # une region autorisee par votre abonnement
+allowed_ssh_cidr = "203.0.113.10/32"   # curl -s https://api.ipify.org  puis ajouter /32
+owner            = "votre-login-github"

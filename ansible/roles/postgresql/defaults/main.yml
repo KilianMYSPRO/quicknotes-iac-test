@@ -1,0 +1,4 @@
+postgresql_version: "16"
+# Reseaux autorises a se connecter a la base.
+# "samenet" = tout sous-reseau auquel le serveur est directement connecte.
+postgresql_allowed_network: "samenet"

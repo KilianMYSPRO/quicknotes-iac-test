@@ -1,0 +1,9 @@
+# TP5 : Dependabot ouvre des pull requests de mise a jour (chapitre 5.4)
+# Le bloc pip est fourni. TODO : ajoutez les ecosystemes docker (dossier /app),
+# github-actions (dossier /) et terraform (dossier /terraform), avec un rythme hebdomadaire.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /app
+    schedule:
+      interval: weekly

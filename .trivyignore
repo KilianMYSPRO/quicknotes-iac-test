@@ -1,0 +1,6 @@
+# Exceptions trivy JUSTIFIEES. Format : un ID par ligne, precede d'un commentaire
+# qui explique POURQUOI le finding est accepte (relu en revue de code).
+#
+# Exemple :
+# AZU-0047 : regle NSG HTTP ouverte a Internet. C'est un site web public, SSH reste limite.
+# AZU-0047

@@ -1,0 +1,2 @@
+# Forcer les fins de ligne Linux (LF) : indispensable pour les scripts et fichiers de config
+* text=auto eol=lf

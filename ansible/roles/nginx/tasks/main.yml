@@ -1,0 +1,8 @@
+# A COMPLETER : role nginx (voir TP2, partie 3.4)
+# 1. Installer nginx
+# 2. Supprimer /etc/nginx/sites-enabled/default                -> notify
+# 3. Template quicknotes.conf.j2 -> /etc/nginx/sites-available/ -> notify
+# 4. Lien symbolique dans /etc/nginx/sites-enabled/             -> notify
+# 5. Verifier la syntaxe : nginx -t   (attention a l'idempotence !)
+# 6. Service nginx demarre et active
+[]

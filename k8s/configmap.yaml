@@ -1,0 +1,14 @@
+# Configuration NON sensible de QuickNotes (peut aller dans Git)
+# TODO 1 : completez la valeur de DB_HOST. L'application lit ces variables
+#          d'environnement (voir app/app.py).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quicknotes-config
+  namespace: quicknotes
+data:
+  APP_ENV: k8s
+  DB_HOST: ""          # TODO : nom du Service de la base (voir db.yaml)
+  DB_PORT: "5432"      # entre guillemets : une ConfigMap ne contient que des chaines
+  DB_NAME: quicknotes
+  DB_USER: quicknotes

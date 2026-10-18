@@ -1,0 +1,7 @@
+# Regles yamllint du depot (lues automatiquement)
+extends: relaxed
+rules:
+  line-length:
+    max: 160
+  truthy:
+    check-keys: false   # autorise la cle "on:" des workflows GitHub

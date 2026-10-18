@@ -1,0 +1,15 @@
+# ALLER PLUS LOIN : etat distant partage dans Azure Storage (verrouillage natif par bail).
+# 1. Creer une fois le compte de stockage (hors de ce code : sinon l'oeuf et la poule)
+#      az group create -n rg-tfstate -l francecentral
+#      az storage account create -n sttfstate<suffixe> -g rg-tfstate --sku Standard_LRS
+#      az storage container create -n tfstate --account-name sttfstate<suffixe> --auth-mode login
+# 2. Renommer ce fichier en backend.tf, adapter, puis : terraform init -migrate-state
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "rg-tfstate"
+    storage_account_name = "sttfstate<suffixe>"
+    container_name       = "tfstate"
+    key                  = "quicknotes.tfstate" # un fichier par workspace : env:/<workspace>
+    use_azuread_auth     = true
+  }
+}

@@ -1,0 +1,33 @@
+# OPTIONNEL : sortie Internet explicite pour le sous-reseau (NAT Gateway, payante).
+# A activer (enable_nat_gateway = true) seulement si db1 ne peut pas faire apt update :
+# Azure supprime peu a peu l'acces sortant "par defaut" des VM sans IP publique.
+resource "azurerm_public_ip" "nat" {
+  count               = var.enable_nat_gateway ? 1 : 0
+  name                = "pip-nat-${local.name}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  tags                = local.tags
+}
+
+resource "azurerm_nat_gateway" "main" {
+  count               = var.enable_nat_gateway ? 1 : 0
+  name                = "nat-${local.name}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku_name            = "Standard"
+  tags                = local.tags
+}
+
+resource "azurerm_nat_gateway_public_ip_association" "main" {
+  count                = var.enable_nat_gateway ? 1 : 0
+  nat_gateway_id       = azurerm_nat_gateway.main[0].id
+  public_ip_address_id = azurerm_public_ip.nat[0].id
+}
+
+resource "azurerm_subnet_nat_gateway_association" "main" {
+  count          = var.enable_nat_gateway ? 1 : 0
+  subnet_id      = azurerm_subnet.main.id
+  nat_gateway_id = azurerm_nat_gateway.main[0].id
+}

@@ -1,0 +1,5 @@
+.vault_pass
+*.retry
+# Inventaires generes par Terraform (contiennent des IP)
+inventories/*/hosts-azure.yml
+inventories/*/hosts-local.yml
